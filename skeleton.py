@@ -223,6 +223,8 @@ class Claude(Ticks):
             return {k: v for k, v in r.items() if isinstance(v, str)}
         if t == "frame-link":
             return {k: r.get(k) for k in ("type", "timestamp", "title", "frameUrl", "path")}
+        if t == "cloud-session":   # added by cloud.py: which claude.ai session this was
+            return r
         if t == "cost-state":
             return {k: v for k, v in r.items() if not isinstance(v, (list, dict)) or k == "modelUsage"}
         if t == "queue-operation" and r.get("operation") == "enqueue":

@@ -17,6 +17,7 @@ logs/<machine>/codex/history.jsonl, session_index.jsonl       prompt log, thread
 logs/<machine>/codex/automations, visualizations              copied as they are
 logs/<machine>/full/…                                         the full archive (below)
 logs/<machine>/timezone.jsonl                                 the machine's timezone, a line each time it changes
+logs/cloud/…                                                  cloud sessions, fetched by cloud.py
 logs/index/sessions.jsonl, prompts.jsonl, days.jsonl          one index over all of it
 logs/claude.ai/artifacts/<id>/<version>.html, artifacts.jsonl  your claude.ai artifacts
 ```
@@ -38,6 +39,26 @@ job. In a Claude Code session here, run `/save-artifacts` now and then: it saves
 new and changed artifacts through `artifacts.py`. Each saved version is kept;
 `session` in `artifacts.jsonl` names the local session that published it, and
 an artifact with none came from a claude.ai chat or a cloud session.
+
+Cloud sessions (Claude Code run on claude.ai, on the web or phone) leave no
+transcript on any Mac. `cloud.py` fetches them:
+
+```sh
+python3 cloud.py --month 2026-09          # sessions with commits that month
+python3 cloud.py --month 2026-09 --list   # just say what's missing
+```
+
+It finds each session from its commits' `Claude-Session` line (a GitHub
+search), skips the ones already archived, and downloads the rest with
+`claude --teleport`, run from an empty git repo whose origin is the
+session's repo (under `~/.cache/ai-log/repos`), typing `/exit` once each has
+loaded. No code is downloaded and your own checkouts aren't touched. The
+sessions are archived as the machine `cloud`, filed under the repo's folder in
+`~/Dropbox/Code`, each starting with a `cloud-session` record that names it;
+`logs/cloud/teleport.jsonl` logs every attempt. It takes about 15 seconds a
+session, and needs `gh` and `claude` signed in and a terminal: run it outside
+the sandbox. It can't see a session that made no commits or whose branch was
+never merged.
 
 `--machine`, `--claude-dir` and `--codex-dir` point it elsewhere, e.g. at a
 backup: `--machine dymaxion --claude-dir ~/Dropbox/Code/settings/dymaxion.backup/.claude --no-codex`.
@@ -166,12 +187,8 @@ unreviewed first draft, known to have false positives; nothing runs it.
 
 ## Not covered
 
-- **Cloud sessions.** Claude Code sessions run on claude.ai (on the web or
-  phone, not on a Mac) leave no transcript on any machine. Their commits are
-  authored by `Claude` and carry a `Claude-Session` line. June to October
-  2026: 74 such sessions, 315 commits, most in July. Codex cloud tasks are the
-  same.
-
+- Cloud sessions until you run `cloud.py`, and those it can't find (no
+  commits, or never merged). Codex cloud tasks aren't fetched at all.
 - Large tool outputs that Claude Code saves to side files
   (`<session>/tool-results/`), and its file-edit backups.
 - Plans and memory are copied as they are now; earlier versions aren't kept.

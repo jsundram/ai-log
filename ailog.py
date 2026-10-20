@@ -35,11 +35,16 @@ def sources(claude_dir, codex_dir):
     """Yield (source, output path under the machine dir, pass class or None to copy)."""
     if claude_dir:
         proj = os.path.join(claude_dir, "projects")
+        # cloud.py's teleport folders: it files those sessions itself, as "cloud".
+        skip = lambda f: "--cache-ai-log-" in f
         for f in glob.glob(os.path.join(proj, "*", "*.jsonl")):
-            yield f, os.path.join("claude", "projects", os.path.relpath(f, proj)), skeleton.Claude
+            if not skip(f):
+                yield f, os.path.join("claude", "projects", os.path.relpath(f, proj)), skeleton.Claude
         # Subagent and workflow-agent transcripts, plus their small metadata
         # (agent descriptions, workflow scripts), which are copied as-is.
         for f in glob.glob(os.path.join(proj, "*", "*", "**", "*"), recursive=True):
+            if skip(f):
+                continue
             rel = os.path.join("claude", "projects", os.path.relpath(f, proj))
             if f.endswith(".jsonl"):
                 yield f, rel, skeleton.Claude

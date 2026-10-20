@@ -168,7 +168,7 @@ def claude_session(machine, path):
             s.origin = s.origin or r.get("entrypoint")
         elif t in ("ai-title", "custom-title"):
             titles[t] = r.get("aiTitle") or r.get("customTitle")
-        elif t in ("bridge-session", "attachment:remote_session_change"):
+        elif t in ("bridge-session", "attachment:remote_session_change", "cloud-session"):
             m = _REMOTE.search(r.get("bridgeSessionId") or r.get("url") or "")
             if m and m.group(1) not in s.remote:
                 s.remote.append(m.group(1))
