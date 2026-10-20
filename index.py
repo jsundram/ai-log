@@ -299,7 +299,7 @@ def main():
     sessions, prompts, histories = [], [], []
     for mdir in sorted(glob.glob(os.path.join(a.logs, "*", ""))):
         machine = os.path.basename(mdir.rstrip(os.sep))
-        if machine in ("images", "index"):
+        if machine in ("images", "index", "claude.ai"):
             continue
         for f in glob.glob(os.path.join(mdir, "claude", "projects", "**", "*.jsonl"), recursive=True):
             sessions.append(claude_session(machine, f))

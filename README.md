@@ -18,6 +18,7 @@ logs/<machine>/codex/automations, visualizations              copied as they are
 logs/<machine>/full/…                                         the full archive (below)
 logs/<machine>/timezone.jsonl                                 the machine's timezone, a line each time it changes
 logs/index/sessions.jsonl, prompts.jsonl, days.jsonl          one index over all of it
+logs/claude.ai/artifacts/<id>/<version>.html, artifacts.jsonl  your claude.ai artifacts
 ```
 
 `logs/` is gitignored. It holds everything you typed, so it never goes to GitHub.
@@ -31,6 +32,12 @@ python3 index.py                 # rebuild logs/index from every machine's skele
 ./install.sh                     # run ailog.py daily at 9 a.m. with launchd (once per machine)
 ./install.sh --remove
 ```
+
+Artifacts need a Claude session to read them, so they aren't part of the daily
+job. In a Claude Code session here, run `/save-artifacts` now and then: it saves
+new and changed artifacts through `artifacts.py`. Each saved version is kept;
+`session` in `artifacts.jsonl` names the local session that published it, and
+an artifact with none came from a claude.ai chat or a cloud session.
 
 `--machine`, `--claude-dir` and `--codex-dir` point it elsewhere, e.g. at a
 backup: `--machine dymaxion --claude-dir ~/Dropbox/Code/settings/dymaxion.backup/.claude --no-codex`.
