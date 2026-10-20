@@ -119,6 +119,22 @@ def convert(src, dst, cls):
     return kept
 
 
+def note_timezone(root):
+    """Append this machine's timezone to timezone.jsonl when it changes. Nothing
+    else records where a machine was; transcripts keep only UTC times."""
+    zone = os.path.realpath("/etc/localtime").partition("zoneinfo/")[2] or None
+    row = {"time": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "zone": zone, "offset": time.strftime("%z")}
+    path = os.path.join(root, "timezone.jsonl")
+    last = None
+    if os.path.exists(path):
+        with open(path) as f:
+            for line in f:
+                last = json.loads(line)
+    if not last or (last.get("zone"), last.get("offset")) != (row["zone"], row["offset"]):
+        with open(path, "a") as f:
+            f.write(json.dumps(row) + "\n")
+
+
 def save_state(path, state):
     tmp = path + ".tmp"
     with open(tmp, "w") as f:
@@ -151,6 +167,9 @@ def main():
     except OSError:
         print("another ailog run holds %s; exiting" % root, file=sys.stderr)
         return 0
+
+    if a.machine == socket.gethostname().split(".")[0]:   # not when reading a backup
+        note_timezone(root)
 
     state_path = os.path.join(root, ".state.json")
     try:

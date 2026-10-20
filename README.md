@@ -16,6 +16,7 @@ logs/<machine>/codex/sessions/<YYYY-MM>/rollout-….jsonl       sessions and the
 logs/<machine>/codex/history.jsonl, session_index.jsonl       prompt log, thread names
 logs/<machine>/codex/automations, visualizations              copied as they are
 logs/<machine>/full/…                                         the full archive (below)
+logs/<machine>/timezone.jsonl                                 the machine's timezone, a line each time it changes
 logs/index/sessions.jsonl, prompts.jsonl, days.jsonl          one index over all of it
 ```
 
