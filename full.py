@@ -193,7 +193,8 @@ def to_video(images, dst, workdir):
     subprocess.run([tool("ffmpeg"), "-hide_banner", "-loglevel", "error", "-y", "-framerate", "1",
                     "-i", os.path.join(workdir, "%05d.png"), "-c:v", "libsvtav1", "-crf", AV1_CRF,
                     "-preset", "6", "-g", "240", "-svtav1-params", "progress=0",
-                    "-pix_fmt", "yuv420p10le", tmp], check=True)
+                    "-pix_fmt", "yuv420p10le", tmp], check=True,
+                   env=dict(os.environ, SVT_LOG="1"))   # the encoder's own log: errors only
     os.replace(tmp, dst)
     return sizes
 
