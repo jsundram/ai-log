@@ -65,10 +65,12 @@ session's repo (under `~/.cache/ai-log/repos`), typing `/exit` once each has
 loaded. No code is downloaded and your own checkouts aren't touched. The
 sessions are archived as the machine `cloud`, filed under the repo's folder in
 `~/Dropbox/Code`, each starting with a `cloud-session` record that names it;
-`logs/cloud/teleport.jsonl` logs every attempt. It takes about 15 seconds a
-session, and needs `gh` and `claude` signed in and a terminal: run it outside
-the sandbox. It can't see a session that made no commits or whose branch was
-never merged.
+`logs/cloud/teleport.jsonl` logs every attempt. It needs `gh` and `claude`
+signed in. From a Claude Code session, run it with the sandbox off. It takes
+about 15 seconds a session, so for a busy month run it in the background or
+with `--limit 20`. Rerunning is safe: archived sessions are skipped, and a
+session that failed (claude.ai sometimes times out) is tried again. It can't
+see a session that made no commits or whose branch was never merged.
 
 `--machine`, `--claude-dir` and `--codex-dir` point it elsewhere, e.g. at a
 backup: `--machine dymaxion --claude-dir ~/Dropbox/Code/settings/dymaxion.backup/.claude --no-codex`.

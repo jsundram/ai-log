@@ -25,10 +25,21 @@ The trimmed copies live in ~/.cache/ai-log/cloud/.claude; ailog.py then
 archives them under logs/cloud/ and index.py picks them up. Each attempt
 is logged to logs/cloud/teleport.jsonl.
 
-It needs `gh` signed in, `claude` signed in to claude.ai, and a terminal of
-its own: run it outside the sandbox. Only commits on a repo's default branch
-are searchable, so a cloud session whose branch was never merged is missed,
-as is one that made no commits.
+It needs `gh` signed in and `claude` signed in to claude.ai. It opens its own
+terminal for teleport, so it runs fine from a Claude Code Bash call, but only
+with the sandbox off: it reads gh's credentials, reaches claude.ai, and
+writes ~/.claude/projects. Each session takes about 15 seconds, so a busy
+month (July 2026 had 36) outlasts a 10-minute Bash call: run it in the
+background, or with --limit 20 and again until nothing is left.
+
+It is safe to rerun: what's already archived is skipped. It exits 1 if any
+session failed (claude.ai sometimes times out); run the same command again.
+Run --list first to see what it will fetch.
+
+Only commits on a repo's default branch are searchable, so a cloud session
+whose branch was never merged is missed, as is one that made no commits.
+A session is found by its commits' dates, so run it after the month's
+branches have merged.
 """
 
 import argparse

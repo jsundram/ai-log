@@ -18,7 +18,7 @@ a day) next to it, then run this on the manifest. It writes:
 Each export is a full snapshot. A later one replaces the chats, projects and
 memories it holds and adds its own artifact archive; nothing is deleted. The
 artifact versions are kept in one archive because they repeat each other: 394
-MB of pages compress to 43 MB together, against 225 MB one by one. Read one
+MB of pages compress to 41 MB together, against 225 MB one by one. Read one
 back with `zstd -dc frames.tar.zst | tar -xO <member>`. The account and
 login-history file is skipped.
 
@@ -70,7 +70,7 @@ def file_each(z, member, folder):
 
 
 def frames(z, dst):
-    """Every file under artifacts/ -> one tar.zst; returns {member: (uuid, version)} for the pages."""
+    """Every file in the artifacts zip -> one tar.zst; returns {member: (uuid, version)} for the pages."""
     os.makedirs(os.path.dirname(dst), exist_ok=True)
     pages = {}
     with open(dst + ".tmp", "wb") as out:
@@ -164,6 +164,7 @@ def main():
                 print("%d artifacts, %d versions -> %s (%.0f MB)" % (n, v, archive, os.path.getsize(archive) / 1e6))
             else:
                 print("skipped %s" % f["filename"])
+    sys.stdout.flush()   # so the index's line prints last
     subprocess.run([sys.executable, os.path.join(HERE, "index.py")], check=False)
     return 0
 
