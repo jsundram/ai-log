@@ -65,7 +65,9 @@ each session row names its skeleton for anything deeper.
 `parent`, `kind` (`main` or `subagent`), `title`, `cwd`, `project`, `origin`
 (the CLI, the desktop app, …), `start`, `end`, `prompts`, `handsOnMinutes`,
 `models`, `tokens`, `costUSD` (Claude only), `filesChanged`, `artifacts`,
-`git` (commits, pushes, branches and PRs, with PR numbers and URLs), and
+`git` (commits, pushes, branches and PRs, with PR numbers and URLs),
+`remoteIds` (the session's claude.ai ids; a commit's `Claude-Session:
+https://claude.ai/code/session_<id>` line names one), and
 `skeleton`, the path of its skeleton under `logs/`.
 
 The index makes three judgment calls. Change them in `index.py`.
@@ -90,6 +92,10 @@ It drops tool output past 200 characters (500 for errors), file snapshots,
 images, encrypted reasoning, and system instructions. That's about 1–4% of the
 original size: 239 MB → 5 MB for the largest Claude session, 939 MB → 8 MB for
 the largest Codex one.
+
+A record the skeleton drops still leaves its `type` and `timestamp`, at most
+one per second, so a timing model that measures gaps between records sees the
+same timeline.
 
 Each app keeps its own record format, so reading a skeleton directly means
 knowing both. Where the same thing lives in each:
@@ -151,6 +157,12 @@ Not done. `ailog.py` copies everything as it appears. `redact.py` is an
 unreviewed first draft, known to have false positives; nothing runs it.
 
 ## Not covered
+
+- **Cloud sessions.** Claude Code sessions run on claude.ai (on the web or
+  phone, not on a Mac) leave no transcript on any machine. Their commits are
+  authored by `Claude` and carry a `Claude-Session` line. June to October
+  2026: 74 such sessions, 315 commits, most in July. Codex cloud tasks are the
+  same.
 
 - Large tool outputs that Claude Code saves to side files
   (`<session>/tool-results/`), and its file-edit backups.

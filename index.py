@@ -33,6 +33,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 TZ = zoneinfo.ZoneInfo("America/New_York")
 WINDOW = datetime.timedelta(minutes=15)   # each typed prompt counts as 15 hands-on minutes
 CODE = os.path.join(os.path.expanduser("~"), "Dropbox", "Code") + os.sep
+_REMOTE = re.compile(r"(?:cse_|session_)([A-Za-z0-9]{20,})")
 EDIT_TOOLS = {"Edit": "file_path", "Write": "file_path", "MultiEdit": "file_path",
               "NotebookEdit": "notebook_path"}
 
@@ -116,6 +117,7 @@ class Session:
         self.origin = None          # Claude entrypoint / Codex originator
         self.also = []              # other machines holding an identical copy
         self.git = []               # pushes and pull requests
+        self.remote = []            # claude.ai session ids, as in commits' Claude-Session lines
 
     def stamp(self, r):
         t = parse_ts(r.get("timestamp"))
@@ -143,6 +145,7 @@ class Session:
             "models": [m for m, _ in self.models.most_common()],
             "tokens": dict(self.tokens) or None, "costUSD": self.cost,
             "filesChanged": self.files, "artifacts": self.artifacts, "git": self.git,
+            "remoteIds": self.remote,
             "skeleton": os.path.relpath(self.path, os.path.join(HERE, "logs")),
         }
 
@@ -165,6 +168,10 @@ def claude_session(machine, path):
             s.origin = s.origin or r.get("entrypoint")
         elif t in ("ai-title", "custom-title"):
             titles[t] = r.get("aiTitle") or r.get("customTitle")
+        elif t in ("bridge-session", "attachment:remote_session_change"):
+            m = _REMOTE.search(r.get("bridgeSessionId") or r.get("url") or "")
+            if m and m.group(1) not in s.remote:
+                s.remote.append(m.group(1))
         elif t == "frame-link":
             s.artifacts.append({"title": r.get("title"), "url": r.get("frameUrl")})
         elif t == "cost-state" and r.get("totalCostUSD") is not None:

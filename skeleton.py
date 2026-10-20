@@ -154,7 +154,23 @@ def _claude_block(b):
     return None   # redacted_thinking, server tool blocks, etc.
 
 
-class Claude:
+class Ticks:
+    """A dropped record still marks a moment something happened; timing
+    models that count gaps between records need it. Keep its type and
+    timestamp, at most one such record per second."""
+
+    def tick(self, r, out):
+        ts = r.get("timestamp")
+        if not isinstance(ts, str):
+            return out
+        if out is None and ts[:19] != getattr(self, "last", None):
+            out = {"type": r.get("type"), "timestamp": ts}
+        if out is not None:
+            self.last = ts[:19]
+        return out
+
+
+class Claude(Ticks):
     """One Claude Code transcript. Stateful, so make one per file.
 
     Fields that rarely change (CLAUDE_CONTEXT) are written once, as a
@@ -169,6 +185,9 @@ class Claude:
         self.usage_seen = set()
 
     def __call__(self, r):
+        return self.tick(r, self._record(r))
+
+    def _record(self, r):
         t = r.get("type")
         if t in ("user", "assistant"):
             out = []
@@ -223,9 +242,10 @@ class Claude:
             if st == "turn_duration":
                 return {k: r.get(k) for k in ("type", "subtype", "timestamp", "durationMs", "messageCount")}
             return None
-        if t == "bridge-session" and not self.titles.get(t):
-            self.titles[t] = True   # once per file: the session was reachable remotely
-            return {"type": t, "bridgeSessionId": r.get("bridgeSessionId")}
+        if t == "bridge-session" and self.titles.get(t) != r.get("bridgeSessionId"):
+            # Its claude.ai id (cse_<id>), the <id> in a commit's Claude-Session line.
+            self.titles[t] = r.get("bridgeSessionId")
+            return {"type": t, "timestamp": r.get("timestamp"), "bridgeSessionId": r.get("bridgeSessionId")}
         return None
 
 
@@ -247,6 +267,9 @@ def _claude_attachment(a, ts):
               "opened_file_in_ide", "plan_file_reference"):
         base.update({k: a.get(k) for k in ("filename", "displayPath", "path", "lineStart", "lineEnd")
                      if a.get(k) is not None})
+        return base
+    if at == "remote_session_change":   # the session's claude.ai link changed
+        base["url"] = a.get("url")
         return base
     if at == "invoked_skills":
         base["skills"] = [s.get("name") for s in a.get("skills") or [] if isinstance(s, dict)]
@@ -343,7 +366,7 @@ def _codex_text_blocks(content):
     return out
 
 
-class Codex:
+class Codex(Ticks):
     """One Codex rollout. Token counts arrive after every model call; only the
     last one before each task_complete (and at end of file) is kept."""
 
@@ -353,7 +376,8 @@ class Codex:
     def __call__(self, r):
         out = _codex(r)
         if out is None:
-            return None
+            return self.tick(r, None)
+        self.tick(r, out)
         et = (out.get("payload") or {}).get("type")
         if et == "token_count":
             self.tokens = out
