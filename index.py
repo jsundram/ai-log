@@ -7,7 +7,7 @@ The skeletons keep each app's own record format. This reads both and writes
 three files in one shape, for github-month-review and anything else that asks
 "what was I doing that day":
 
-    sessions.jsonl  one line per session or subagent: machine, app, title,
+    sessions.jsonl  one line per session, subagent or claude.ai chat: machine, app, title,
                     folder, start/end, typed prompts, hands-on minutes,
                     models, tokens, files changed, artifacts published
     prompts.jsonl   one line per typed prompt, oldest first
@@ -276,6 +276,24 @@ def codex_session(machine, path, names):
 
 # --- prompt logs, for sessions whose transcripts are gone --------------------
 
+# --- claude.ai chats ---------------------------------------------------------
+
+def chat_session(path):
+    """A claude.ai chat, from chats.py's copy of the data export."""
+    c = json.load(open(path, encoding="utf-8"))
+    s = Session("claude.ai", "claude.ai", path)
+    s.id, s.title, s.origin = c.get("uuid"), c.get("name") or None, "chat"
+    for m in c.get("chat_messages") or []:
+        t = parse_ts(m.get("created_at"))
+        if t:
+            s.times.append(t)
+        if m.get("sender") == "human":
+            text = m.get("text") or "\n".join(b.get("text") or "" for b in m.get("content") or []
+                                               if b.get("type") == "text")
+            s.prompt(t, "typed", text)
+    return s
+
+
 def history_prompts(machine, app, path, known):
     out = []
     for r in records(path):
@@ -314,6 +332,9 @@ def main():
             h = os.path.join(mdir, app, "history.jsonl")
             if os.path.exists(h):
                 histories.append((machine, app, h))
+
+    for f in glob.glob(os.path.join(a.logs, "claude.ai", "conversations", "*.json")):
+        sessions.append(chat_session(f))
 
     # A session copied between machines (e.g. when ~/.claude was moved) shows up
     # in both folders. Keep the fuller copy and note where else it is.

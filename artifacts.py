@@ -71,13 +71,13 @@ def main():
             added += 1
         raw = open(dst, "rb").read()
         project, session = by.get(aid, (None, None))
-        rows[(aid, version)] = {
+        rows[(aid, version)] = dict(rows.get((aid, version), {}), **{   # keeps what chats.py added
             "id": aid, "title": title, "url": "https://claude.ai/artifact/" + aid,
             "version": version,
             "published": datetime.datetime.fromtimestamp(int(version.split("-")[0]),
                                                          datetime.timezone.utc).isoformat().replace("+00:00", "Z"),
             "lastUpdated": updated, "bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest(),
-            "file": os.path.relpath(dst, OUT), "project": project, "session": session}
+            "file": os.path.relpath(dst, OUT), "project": project, "session": session})
     os.makedirs(OUT, exist_ok=True)
     with open(jl + ".tmp", "w", encoding="utf-8") as f:
         for r in sorted(rows.values(), key=lambda r: r["published"]):

@@ -20,6 +20,8 @@ logs/<machine>/timezone.jsonl                                 the machine's time
 logs/cloud/…                                                  cloud sessions, fetched by cloud.py
 logs/index/sessions.jsonl, prompts.jsonl, days.jsonl          one index over all of it
 logs/claude.ai/artifacts/<id>/<version>.html, artifacts.jsonl  your claude.ai artifacts
+logs/claude.ai/conversations, projects, memories              claude.ai chats, from its data export
+logs/claude.ai/exports/<date>/frames.tar.zst                  every artifact version in that export
 ```
 
 `logs/` is gitignored. It holds everything you typed, so it never goes to GitHub.
@@ -39,6 +41,14 @@ job. In a Claude Code session here, run `/save-artifacts` now and then: it saves
 new and changed artifacts through `artifacts.py`. Each saved version is kept;
 `session` in `artifacts.jsonl` names the local session that published it, and
 an artifact with none came from a claude.ai chat or a cloud session.
+
+claude.ai chats come from its data export (Settings → Privacy → Export data).
+The email links to a manifest listing a few zips; download them next to it
+within a day, then run `python3 chats.py ~/Downloads/manifest-<…>.json`. It
+files each chat, project and memory, and keeps every artifact version in one
+archive per export (394 MB of pages is 41 MB together). The index lists each
+chat as a session with app `claude.ai`. The account and login-history file is
+skipped.
 
 Cloud sessions (Claude Code run on claude.ai, on the web or phone) leave no
 transcript on any Mac. `cloud.py` fetches them:
@@ -193,7 +203,7 @@ unreviewed first draft, known to have false positives; nothing runs it.
   (`<session>/tool-results/`), and its file-edit backups.
 - Plans and memory are copied as they are now; earlier versions aren't kept.
 - Codex's goals and memories databases. Both are empty so far.
-- claude.ai and ChatGPT chats live on the providers' servers (the ChatGPT Mac
-  app's local copy is encrypted). Both offer a data export; an importer for
-  those would go here.
+- ChatGPT chats. They live on OpenAI's servers (the Mac app's local copy is
+  encrypted); its data export would need an importer like `chats.py`.
+- claude.ai chats newer than the last export you imported.
 - Codex sessions on this Mac go back to September 2026, plus one from May.
