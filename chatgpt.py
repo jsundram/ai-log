@@ -26,9 +26,11 @@ Read a file back with `zstd -dc files.tar.zst | tar -xO <member>`. Skipped:
 the account file, settings, ads, and chat.html (the same chats as one page).
 
 The export names projects and custom GPTs only by id. templates.json lists
-each one's chats so you can tell which is which; write its "name" there (a
-GPT that still exists shows it at https://chatgpt.com/g/<id>). Names you fill
-in are kept when it's rewritten, and index.py uses them.
+each one's chats, with a link to it and to its latest chat; the import
+prints those links for each one without a name. Open one, and write the name
+it shows as "name" in templates.json (a retired GPT says "GPT not found"; its
+chat's titles are the only clue). Names are kept when it's rewritten, and
+index.py uses them.
 
 index.py lists each chat as a session from chatgpt, with what you typed.
 """
@@ -207,6 +209,8 @@ def list_templates():
                     "kind": "project" if tid.startswith("g-p-") else "gpt", "chats": len(cs),
                     "first": day(cs[0].get("create_time")),
                     "last": day(max(c.get("update_time") or c.get("create_time") or 0 for c in cs)),
+                    "url": "https://chatgpt.com/g/%s%s" % (tid, "/project" if tid.startswith("g-p-") else ""),
+                    "lastChat": "https://chatgpt.com/c/" + cs[-1]["id"],
                     "titles": [c.get("title") for c in cs]}
     for tid in old.keys() - out.keys():
         out[tid] = old[tid]   # keep a name even if its chats are gone
@@ -214,8 +218,7 @@ def list_templates():
         json.dump(out, f, ensure_ascii=False, indent=1)
         f.write("\n")
     os.replace(path + ".tmp", path)
-    unnamed = sum(1 for t in out.values() if not t.get("name"))
-    return len(out), unnamed
+    return len(out), [t for t in out.values() if not t.get("name")]
 
 
 def main():
@@ -229,7 +232,10 @@ def main():
         n, uses = file_chats(z, sorted(n for n in z.namelist() if _CHATS.match(n)))
         print("%d chats" % n)
         n, unnamed = list_templates()
-        print("%d projects and custom GPTs, %d without a name -> %s" % (n, unnamed, os.path.join(OUT, "templates.json")))
+        print("%d projects and custom GPTs, %d without a name -> %s" % (n, len(unnamed), os.path.join(OUT, "templates.json")))
+        for t in unnamed:
+            print("  a %s with %d chats (%s): %s or its latest chat, %s" % (
+                t["kind"], t["chats"], t["titles"][-1], t.get("url"), t.get("lastChat")))
         archive = os.path.join(OUT, "exports", date, "files.tar.zst")
         rows = file_rest(z, archive, uses)
         merge_rows(rows)

@@ -65,10 +65,11 @@ recordings, and one was 200 MB. The account file, settings, ads and
 chat as a session with app `chatgpt`. It needs `zstd` and ImageMagick.
 
 The export names projects and custom GPTs only by id. `templates.json` lists
-each one with its chats' titles and dates; fill in its `"name"` and rerun
-`index.py`. A GPT that still exists shows its name at
-`https://chatgpt.com/g/<id>`, `g-` included; a retired one (like OpenAI's
-DALL·E GPT) says "GPT not found", so its chats' titles are the only clue.
+each one with its chats' titles and dates, a link to it (`url`) and one to
+its latest chat (`lastChat`), and the import prints both links for each one
+without a name. Open one, fill in the `"name"` it shows, and rerun
+`index.py`. A retired GPT (like OpenAI's DALL·E) says "GPT not found", so its
+chats' titles are the only clue.
 Names are kept when a later import rewrites the file.
 
 Cloud sessions (Claude Code run on claude.ai, on the web or phone) leave no
