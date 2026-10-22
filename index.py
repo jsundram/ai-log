@@ -315,14 +315,15 @@ def chat_session(path):
 
 # --- ChatGPT chats ----------------------------------------------------------
 
-def chatgpt_session(path):
+def chatgpt_session(path, templates):
     """A ChatGPT chat, from chatgpt.py's copy of the data export."""
     c = json.load(open(path, encoding="utf-8"))
     s = Session("chatgpt", "chatgpt", path)
     s.id, s.title, s.origin = c.get("id"), c.get("title") or None, "chat"
     tid = c.get("conversation_template_id")
     if tid:   # the export has no names for these, only ids
-        s.template = {"kind": "project" if tid.startswith("g-p-") else "gpt", "id": tid}
+        s.template = {"kind": "project" if tid.startswith("g-p-") else "gpt", "id": tid,
+                      "name": (templates.get(tid) or {}).get("name")}   # from chatgpt.py's templates.json
     # mapping holds every branch; a prompt you edited is still one you typed
     for node in (c.get("mapping") or {}).values():
         m = node.get("message") or {}
@@ -386,8 +387,10 @@ def main():
 
     for f in glob.glob(os.path.join(a.logs, "claude.ai", "conversations", "*.json")):
         sessions.append(chat_session(f))
+    tl = os.path.join(a.logs, "chatgpt", "templates.json")
+    templates = json.load(open(tl, encoding="utf-8")) if os.path.exists(tl) else {}
     for f in glob.glob(os.path.join(a.logs, "chatgpt", "conversations", "*.json")):
-        sessions.append(chatgpt_session(f))
+        sessions.append(chatgpt_session(f, templates))
 
     # A session copied between machines (e.g. when ~/.claude was moved) shows up
     # in both folders. Keep the fuller copy and note where else it is.

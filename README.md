@@ -23,6 +23,7 @@ logs/claude.ai/artifacts/<id>/<version>.html, artifacts.jsonl  your claude.ai ar
 logs/claude.ai/conversations, projects, memories              claude.ai chats, from its data export
 logs/claude.ai/exports/<date>/frames.tar.zst                  every artifact version in that export
 logs/chatgpt/conversations/<id>.json, files.jsonl             ChatGPT chats and their files, from its data export
+logs/chatgpt/templates.json                                   its projects and custom GPTs; name them here
 logs/chatgpt/exports/<date>/files.tar.zst                     the export's files that aren't images
 ```
 
@@ -62,6 +63,13 @@ is kept. Audio and video are listed but not kept: they're your own
 recordings, and one was 200 MB. The account file, settings, ads and
 `chat.html` (the same chats as one page) are skipped. The index lists each
 chat as a session with app `chatgpt`. It needs `zstd` and ImageMagick.
+
+The export names projects and custom GPTs only by id. `templates.json` lists
+each one with its chats' titles and dates; fill in its `"name"` and rerun
+`index.py`. A GPT that still exists shows its name at
+`https://chatgpt.com/g/<id>`, `g-` included; a retired one (like OpenAI's
+DALL·E GPT) says "GPT not found", so its chats' titles are the only clue.
+Names are kept when a later import rewrites the file.
 
 Cloud sessions (Claude Code run on claude.ai, on the web or phone) leave no
 transcript on any Mac. `cloud.py` fetches them:
@@ -122,8 +130,8 @@ each session row names its skeleton for anything deeper.
 `models`, `tokens`, `costUSD` (Claude only), `filesChanged`, `artifacts`
 (for a claude.ai chat, the ones made in it, by id and title, with no link),
 `attachments` (chats: the names of files you attached), `template` (a
-ChatGPT chat's project or custom GPT: `kind` and `id`; the export has no
-names), `git` (commits, pushes, branches and PRs, with PR numbers and URLs),
+ChatGPT chat's project or custom GPT: `kind`, `id`, and the `name` you gave
+it in `templates.json`), `git` (commits, pushes, branches and PRs, with PR numbers and URLs),
 `remoteIds` (the session's claude.ai ids; a commit's `Claude-Session:
 https://claude.ai/code/session_<id>` line names one), and
 `skeleton`, the path of its skeleton under `logs/`.

@@ -9,6 +9,8 @@ The email links to one zip; download it and run this on it. It writes:
     logs/chatgpt/conversations/<id>.json   one chat each, as exported
     logs/chatgpt/files.jsonl               a line per file in the export: its name,
                                            the chats that use it, and where it's kept
+    logs/chatgpt/templates.json            each project and custom GPT your chats ran
+                                           in, with their titles; fill in "name"
     logs/images/<id[:2]>/<id>.avif         images, as AVIF, in the store full.py uses
     logs/chatgpt/exports/<date>/files.tar.zst
                                            everything else, as exported: PDFs, code,
@@ -23,11 +25,17 @@ elsewhere, and one is 200 MB.
 Read a file back with `zstd -dc files.tar.zst | tar -xO <member>`. Skipped:
 the account file, settings, ads, and chat.html (the same chats as one page).
 
+The export names projects and custom GPTs only by id. templates.json lists
+each one's chats so you can tell which is which; write its "name" there (a
+GPT that still exists shows it at https://chatgpt.com/g/<id>). Names you fill
+in are kept when it's rewritten, and index.py uses them.
+
 index.py lists each chat as a session from chatgpt, with what you typed.
 """
 
 import concurrent.futures
 import datetime
+import glob
 import hashlib
 import json
 import os
@@ -182,6 +190,34 @@ def merge_rows(rows):
     os.replace(jl + ".tmp", jl)
 
 
+def list_templates():
+    """templates.json: every project and custom GPT the filed chats ran in, keeping names."""
+    path = os.path.join(OUT, "templates.json")
+    old = json.load(open(path, encoding="utf-8")) if os.path.exists(path) else {}
+    by = {}
+    for f in glob.glob(os.path.join(OUT, "conversations", "*.json")):
+        c = json.load(open(f, encoding="utf-8"))
+        if c.get("conversation_template_id"):
+            by.setdefault(c["conversation_template_id"], []).append(c)
+    day = lambda t: datetime.datetime.fromtimestamp(t, datetime.timezone.utc).date().isoformat() if t else None
+    out = {}
+    for tid, cs in sorted(by.items(), key=lambda kv: -len(kv[1])):
+        cs.sort(key=lambda c: c.get("create_time") or 0)
+        out[tid] = {"name": (old.get(tid) or {}).get("name"),
+                    "kind": "project" if tid.startswith("g-p-") else "gpt", "chats": len(cs),
+                    "first": day(cs[0].get("create_time")),
+                    "last": day(max(c.get("update_time") or c.get("create_time") or 0 for c in cs)),
+                    "titles": [c.get("title") for c in cs]}
+    for tid in old.keys() - out.keys():
+        out[tid] = old[tid]   # keep a name even if its chats are gone
+    with open(path + ".tmp", "w", encoding="utf-8") as f:
+        json.dump(out, f, ensure_ascii=False, indent=1)
+        f.write("\n")
+    os.replace(path + ".tmp", path)
+    unnamed = sum(1 for t in out.values() if not t.get("name"))
+    return len(out), unnamed
+
+
 def main():
     if len(sys.argv) != 2 or not sys.argv[1].endswith(".zip"):
         sys.exit(__doc__)
@@ -192,6 +228,8 @@ def main():
         date = m.group(1) if m else datetime.date(*max(i.date_time for i in z.infolist())[:3]).isoformat()
         n, uses = file_chats(z, sorted(n for n in z.namelist() if _CHATS.match(n)))
         print("%d chats" % n)
+        n, unnamed = list_templates()
+        print("%d projects and custom GPTs, %d without a name -> %s" % (n, unnamed, os.path.join(OUT, "templates.json")))
         archive = os.path.join(OUT, "exports", date, "files.tar.zst")
         rows = file_rest(z, archive, uses)
         merge_rows(rows)
