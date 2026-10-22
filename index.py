@@ -167,6 +167,7 @@ def claude_session(machine, path):
         s.subagent = True
         s.parent = parts[parts.index("subagents") - 1]
     titles = {}
+    untagged = []   # (time, text): user text with neither origin nor promptSource
     for r in records(path):
         t = r.get("type")
         ts = s.stamp(r)
@@ -211,6 +212,17 @@ def claude_session(machine, path):
                 txt = text_of(m.get("content"))
                 if human and not txt.lstrip().startswith("<"):
                     s.prompt(ts, "typed", txt)
+                elif "origin" not in r and "promptSource" not in r:
+                    c = m.get("content")
+                    if not (isinstance(c, list) and any(isinstance(b, dict) and b.get("type") == "tool_result" for b in c)):
+                        untagged.append((ts, txt))
+    # Claude Code 2.1.150-2.1.153 (until about late June 2026) wrote neither
+    # field on typed prompts. Count those like history_prompts() does, and
+    # only from the CLI: sdk-cli sessions are scripted runs.
+    if s.origin == "cli" and not s.subagent:
+        for ts, txt in untagged:
+            if not txt.lstrip().startswith(("<", "[", "/")):
+                s.prompt(ts, "typed", txt)
     s.title = titles.get("custom-title") or titles.get("ai-title")
     return s
 
