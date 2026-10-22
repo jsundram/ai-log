@@ -7,7 +7,7 @@ The skeletons keep each app's own record format. This reads both and writes
 three files in one shape, for github-month-review and anything else that asks
 "what was I doing that day":
 
-    sessions.jsonl  one line per session, subagent or claude.ai chat: machine, app, title,
+    sessions.jsonl  one line per session, subagent, or claude.ai or ChatGPT chat: machine, app, title,
                     folder, start/end, typed prompts, hands-on minutes,
                     models, tokens, files changed, artifacts published
     prompts.jsonl   one line per typed prompt, oldest first
@@ -114,6 +114,8 @@ class Session:
         self.cost = None
         self.files = []
         self.artifacts = []
+        self.attachments = []       # chats: names of the files you attached
+        self.template = None        # ChatGPT: the project or custom GPT a chat ran in
         self.origin = None          # Claude entrypoint / Codex originator
         self.also = []              # other machines holding an identical copy
         self.git = []               # pushes and pull requests
@@ -128,6 +130,10 @@ class Session:
     def prompt(self, t, kind, text):
         if t and text.strip():
             self.prompts.append((t, kind, text))
+
+    def attached(self, name):
+        if name and name not in self.attachments:
+            self.attachments.append(name)
 
     def changed(self, path):
         if path and path not in self.files:
@@ -144,7 +150,8 @@ class Session:
             "prompts": len(typed), "handsOnMinutes": hands_on(typed),
             "models": [m for m, _ in self.models.most_common()],
             "tokens": dict(self.tokens) or None, "costUSD": self.cost,
-            "filesChanged": self.files, "artifacts": self.artifacts, "git": self.git,
+            "filesChanged": self.files, "artifacts": self.artifacts, "attachments": self.attachments,
+            "template": self.template, "git": self.git,
             "remoteIds": self.remote,
             "skeleton": os.path.relpath(self.path, os.path.join(HERE, "logs")),
         }
@@ -291,6 +298,50 @@ def chat_session(path):
             text = m.get("text") or "\n".join(b.get("text") or "" for b in m.get("content") or []
                                                if b.get("type") == "text")
             s.prompt(t, "typed", text)
+            for f in (m.get("files") or []) + (m.get("attachments") or []):
+                s.attached(f.get("file_name"))
+        # Artifacts made in the chat, by the artifacts tool; one entry per id,
+        # with its latest title. They have no link: only published ones do.
+        for b in m.get("content") or []:
+            inp = b.get("input") if b.get("type") == "tool_use" and b.get("name") == "artifacts" else None
+            if isinstance(inp, dict) and inp.get("id"):
+                a = next((a for a in s.artifacts if a["id"] == inp["id"]), None)
+                if a is None:
+                    a = {"id": inp["id"], "title": None}
+                    s.artifacts.append(a)
+                a["title"] = inp.get("title") or a["title"]
+    return s
+
+
+# --- ChatGPT chats ----------------------------------------------------------
+
+def chatgpt_session(path):
+    """A ChatGPT chat, from chatgpt.py's copy of the data export."""
+    c = json.load(open(path, encoding="utf-8"))
+    s = Session("chatgpt", "chatgpt", path)
+    s.id, s.title, s.origin = c.get("id"), c.get("title") or None, "chat"
+    tid = c.get("conversation_template_id")
+    if tid:   # the export has no names for these, only ids
+        s.template = {"kind": "project" if tid.startswith("g-p-") else "gpt", "id": tid}
+    # mapping holds every branch; a prompt you edited is still one you typed
+    for node in (c.get("mapping") or {}).values():
+        m = node.get("message") or {}
+        t = parse_ts(m.get("create_time"))
+        if not t:
+            continue
+        s.times.append(t)
+        role, content = (m.get("author") or {}).get("role"), m.get("content") or {}
+        if role == "assistant" and (m.get("metadata") or {}).get("model_slug"):
+            s.models[m["metadata"]["model_slug"]] += 1
+        if role != "user" or content.get("content_type") not in ("text", "multimodal_text"):
+            continue   # user_editable_context is custom instructions, not a prompt
+        for f in (m.get("metadata") or {}).get("attachments") or []:
+            s.attached(f.get("name"))
+        parts = content.get("parts") or []
+        spoken = [p.get("text") or "" for p in parts if isinstance(p, dict)
+                  and p.get("content_type") == "audio_transcription" and p.get("direction") == "in"]
+        typed = "\n".join(p for p in parts if isinstance(p, str))
+        s.prompt(t, "voice" if spoken and not typed.strip() else "typed", typed if typed.strip() else "\n".join(spoken))
     return s
 
 
@@ -317,7 +368,7 @@ def main():
     sessions, prompts, histories = [], [], []
     for mdir in sorted(glob.glob(os.path.join(a.logs, "*", ""))):
         machine = os.path.basename(mdir.rstrip(os.sep))
-        if machine in ("images", "index", "claude.ai"):
+        if machine in ("images", "index", "claude.ai", "chatgpt"):
             continue
         for f in glob.glob(os.path.join(mdir, "claude", "projects", "**", "*.jsonl"), recursive=True):
             sessions.append(claude_session(machine, f))
@@ -335,6 +386,8 @@ def main():
 
     for f in glob.glob(os.path.join(a.logs, "claude.ai", "conversations", "*.json")):
         sessions.append(chat_session(f))
+    for f in glob.glob(os.path.join(a.logs, "chatgpt", "conversations", "*.json")):
+        sessions.append(chatgpt_session(f))
 
     # A session copied between machines (e.g. when ~/.claude was moved) shows up
     # in both folders. Keep the fuller copy and note where else it is.

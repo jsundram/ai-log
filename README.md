@@ -22,6 +22,8 @@ logs/index/sessions.jsonl, prompts.jsonl, days.jsonl          one index over all
 logs/claude.ai/artifacts/<id>/<version>.html, artifacts.jsonl  your claude.ai artifacts
 logs/claude.ai/conversations, projects, memories              claude.ai chats, from its data export
 logs/claude.ai/exports/<date>/frames.tar.zst                  every artifact version in that export
+logs/chatgpt/conversations/<id>.json, files.jsonl             ChatGPT chats and their files, from its data export
+logs/chatgpt/exports/<date>/files.tar.zst                     the export's files that aren't images
 ```
 
 `logs/` is gitignored. It holds everything you typed, so it never goes to GitHub.
@@ -49,6 +51,17 @@ files each chat, project and memory, and keeps every artifact version in one
 archive per export (394 MB of pages is 41 MB together). The index lists each
 chat as a session with app `claude.ai`. The account and login-history file is
 skipped.
+
+ChatGPT chats come from its data export too (Settings → Data controls →
+Export data). The email links to one zip; download it and run
+`python3 chatgpt.py ~/Downloads/<…>.zip`. It files each chat, puts images in
+`logs/images` as AVIF like `full.py` does (176 MB of images is 15 MB), and
+keeps the other files (PDFs, code, zips, ChatGPT sites) in one archive per
+export. `files.jsonl` lists every file with its name, its chats and where it
+is kept. Audio and video are listed but not kept: they're your own
+recordings, and one was 200 MB. The account file, settings, ads and
+`chat.html` (the same chats as one page) are skipped. The index lists each
+chat as a session with app `chatgpt`. It needs `zstd` and ImageMagick.
 
 Cloud sessions (Claude Code run on claude.ai, on the web or phone) leave no
 transcript on any Mac. `cloud.py` fetches them:
@@ -99,14 +112,18 @@ each session row names its skeleton for anything deeper.
 
 - `typed`: a prompt you sent.
 - `queued`: a message you sent while the agent was working (Claude only).
+- `voice`: a prompt you spoke in a ChatGPT voice chat, as transcribed.
 - `history`: from a prompt log, for a session whose transcript is gone. This
   covers October 2025 through March 2026, before transcripts were kept.
 
 **`sessions.jsonl`**, one line per session or subagent: `machine`, `app`, `id`,
 `parent`, `kind` (`main` or `subagent`), `title`, `cwd`, `project`, `origin`
 (the CLI, the desktop app, …), `start`, `end`, `prompts`, `handsOnMinutes`,
-`models`, `tokens`, `costUSD` (Claude only), `filesChanged`, `artifacts`,
-`git` (commits, pushes, branches and PRs, with PR numbers and URLs),
+`models`, `tokens`, `costUSD` (Claude only), `filesChanged`, `artifacts`
+(for a claude.ai chat, the ones made in it, by id and title, with no link),
+`attachments` (chats: the names of files you attached), `template` (a
+ChatGPT chat's project or custom GPT: `kind` and `id`; the export has no
+names), `git` (commits, pushes, branches and PRs, with PR numbers and URLs),
 `remoteIds` (the session's claude.ai ids; a commit's `Claude-Session:
 https://claude.ai/code/session_<id>` line names one), and
 `skeleton`, the path of its skeleton under `logs/`.
@@ -205,7 +222,6 @@ unreviewed first draft, known to have false positives; nothing runs it.
   (`<session>/tool-results/`), and its file-edit backups.
 - Plans and memory are copied as they are now; earlier versions aren't kept.
 - Codex's goals and memories databases. Both are empty so far.
-- ChatGPT chats. They live on OpenAI's servers (the Mac app's local copy is
-  encrypted); its data export would need an importer like `chats.py`.
-- claude.ai chats newer than the last export you imported.
+- claude.ai and ChatGPT chats newer than the last export you imported, and
+  audio or video you uploaded to ChatGPT.
 - Codex sessions on this Mac go back to September 2026, plus one from May.

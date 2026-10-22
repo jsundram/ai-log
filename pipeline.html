@@ -331,7 +331,7 @@ a { color: var(--accent); }
     <div class="gap"><span class="size">367 files · 89 MB</span><h3>Large tool outputs</h3><p>When a tool result is too long, Claude Code saves it to a side file and keeps only a pointer in the session. Neither version copies these files.</p></div>
     <div class="gap"><span class="size">87 MB</span><h3>File-edit backups</h3><p>The copies Claude Code keeps of files before editing them, used for rewinding.</p></div>
     <div class="gap"><span class="size">latest copy only</span><h3>Earlier versions of plans and memory</h3><p>Claude's plans, tasks, todos and memory, and Codex's automations, are copied as they are each day. Earlier versions of them are not kept.</p></div>
-    <div class="gap"><span class="size">on the providers' servers</span><h3>claude.ai and ChatGPT chats</h3><p>The ChatGPT Mac app's local copy is encrypted. Both services offer a data export.</p></div>
+    <div class="gap"><span class="size">until the next export</span><h3>Recent claude.ai and ChatGPT chats</h3><p>Both live on the providers' servers. <span class="mono">chats.py</span> and <span class="mono">chatgpt.py</span> import each service's data export, so chats since the last one are missing.</p></div>
     <div class="gap"><span class="size">not started</span><h3>Redaction</h3><p>Nothing is redacted. <span class="mono">logs/</span> is gitignored and stays out of every repository.</p></div>
   </div>
 </section>
